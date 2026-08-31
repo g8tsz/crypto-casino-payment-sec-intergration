@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  walletAddress String   @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  balance   CreditBalance?
+  transactions Transaction[]
+  bets      Bet[]
+}
+
+model CreditBalance {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credits   String   @default("0") // decimal string for precision (e.g. "1000.50")
+  currency  String   @default("USDC") // or token symbol
+  updatedAt DateTime @updatedAt
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String   // DEPOSIT | WITHDRAW | BET | WIN | LOSS | ADJUSTMENT
+  amount      String   // decimal string, positive for credit, negative for debit where applicable
+  balanceAfter String? // snapshot after tx for audit
+  txHash      String?  // blockchain tx hash for deposits/withdrawals
+  refId       String?  // bet id or external reference
+  metadata    String?  // JSON string for extra data
+  createdAt   DateTime @default(now())
+}
+
+model Bet {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    String   // stake
+  outcome   String   // WIN | LOSS | PENDING
+  payout    String?  // amount won (for WIN) or "0" for LOSS
+  gameRef   String?  // game identifier
+  createdAt DateTime @default(now())
+}
